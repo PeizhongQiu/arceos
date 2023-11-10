@@ -309,6 +309,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "axdtb"
+version = "0.2.3"
+
+[[package]]
 name = "axerrno"
 version = "0.1.0"
 dependencies = [
@@ -470,6 +474,7 @@ dependencies = [
  "axconfig",
  "axdisplay",
  "axdriver",
+ "axdtb",
  "axfs",
  "axhal",
  "axlog",
