@@ -154,6 +154,13 @@ impl<G: AdapterWrapped> List<G> {
         unsafe { self.list.push_back(ptr.as_ref()) }
     }
 
+    pub fn push_front(&mut self, data: G::Wrapped) {
+        let ptr = data.into_pointer();
+
+        // SAFETY: We took ownership of the entry, so it is safe to insert it.
+        unsafe { self.list.push_front(ptr.as_ref()) }
+    }
+
     /// Inserts the given object after `existing`.
     ///
     /// It is dropped if it's already on this (or another) list; this can happen for

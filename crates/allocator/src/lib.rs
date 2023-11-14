@@ -12,8 +12,8 @@
 #![feature(result_option_inspect)]
 #![cfg_attr(feature = "allocator_api", feature(allocator_api))]
 
-mod early;
-pub use early::EarlyAllocator;
+// mod early;
+// pub use early::EarlyAllocator;
 
 #[cfg(feature = "bitmap")]
 mod bitmap;

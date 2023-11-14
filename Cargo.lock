@@ -309,10 +309,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdtb"
-version = "0.2.3"
-
-[[package]]
 name = "axerrno"
 version = "0.1.0"
 dependencies = [
@@ -474,7 +470,6 @@ dependencies = [
  "axconfig",
  "axdisplay",
  "axdriver",
- "axdtb",
  "axfs",
  "axhal",
  "axlog",
@@ -1011,6 +1006,13 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "ex5"
+version = "0.1.0"
+dependencies = [
+ "axstd",
 ]
 
 [[package]]
