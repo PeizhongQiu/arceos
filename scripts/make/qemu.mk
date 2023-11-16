@@ -18,7 +18,7 @@ qemu_args-riscv64 := \
   -machine virt \
   -bios default \
   -kernel $(OUT_BIN) \
-  -drive if=pflash,file=$(CURDIR)/payload/apps.bin,format=raw,unit=1
+  -drive if=pflash,file=$(CURDIR)/payload/output/apps.bin,format=raw,unit=1
 
 
 qemu_args-aarch64 := \
