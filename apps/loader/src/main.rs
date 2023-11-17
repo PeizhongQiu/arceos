@@ -5,10 +5,14 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+mod page_table;
+mod appmanager;
+use page_table::PageTable;
+use appmanager::AppManager;
 #[cfg(feature = "axstd")]
 use axstd::println;
 const PLASH_START: usize = 0x22000000;
-const RUN_START: usize = 0xffff_ffc0_8010_0000;
+const RUN_START: usize = 0x4010_0000;
 
 const SYS_HELLO: usize = 1;
 const SYS_PUTCHAR: usize = 2;
@@ -32,52 +36,83 @@ fn abi_exit() {
     axhal::misc::terminate();
 }
 
+#[link_section = ".data.app_page_table"]
+static mut APP_PAGE_TABLE: [PageTable; 10] = [PageTable::new(0), PageTable::new(1), PageTable::new(2), PageTable::new(3),PageTable::new(4), PageTable::new(5),
+                    PageTable::new(6), PageTable::new(7),PageTable::new(8), PageTable::new(9),];
+
+static mut APP_MANAGER: AppManager = AppManager::new();
+
 #[cfg_attr(feature = "axstd", no_mangle)]
 fn main() {
-    let num_app_ptr = PLASH_START as usize as *const usize;
-    let num_app = unsafe { num_app_ptr.read_volatile() };
-    let app_start: Vec<usize>  =  unsafe { core::slice::from_raw_parts(num_app_ptr.add(1), num_app * 2).to_vec()};
-        
-    println!("Load payload ...");
-    for i in 0..num_app {
-        let start = (app_start[i*2]+PLASH_START) as *const u8;
-        let size = app_start[i*2+1];
-        println!("{} {}", start as usize, size);
-        let code = unsafe { core::slice::from_raw_parts(start, size)};
-        println!("load code {:?}; address [{:?}]", code, code.as_ptr());
-        // app running aspace
-        // SBI(0x80000000) -> App <- Kernel(0x80200000)
-        // 0xffff_ffc0_0000_0000
-        let run_code = unsafe {
-            core::slice::from_raw_parts_mut(RUN_START as *mut u8, size)
-        };
-        run_code.copy_from_slice(code);
-        println!("run code {:?}; address [{:?}]", run_code, run_code.as_ptr());
-        println!("Execute app ...");
-        register_abi(SYS_HELLO, abi_hello as usize);
-        register_abi(SYS_PUTCHAR, abi_putchar as usize);
-        register_abi(SYS_EXIT, abi_exit as usize);
-        // execute app
 
-        unsafe {println!("{:x?}",ABI_TABLE);}
-        unsafe { 
-            let mut addr:usize = 0;
-            core::arch::asm!("
-            la      {ar}, {abi_table}",
-            ar = out(reg) addr,
-            abi_table = sym ABI_TABLE,
-            );
-            println!("{:x?}",addr);
-        }   
+    unsafe { switch_app_aspace(APP_PAGE_TABLE[0].clone()); }
+
+    let num_app_ptr = PLASH_START as usize as *const usize;
+    unsafe { APP_MANAGER.update_num_app(num_app_ptr.read_volatile()) };
+    let app_start  =  unsafe { core::slice::from_raw_parts(num_app_ptr.add(1), APP_MANAGER.get_num_app() * 2).to_vec()};
+    unsafe { APP_MANAGER.update_app_start(app_start) };
         
-        unsafe { core::arch::asm!("
-            la      a0, {abi_table}
-            la      t2, {run_start}
-            jalr    t2",
-            run_start = const RUN_START,
-            abi_table = sym ABI_TABLE,
-        )}   
-    }
+    println!("Load first payload ...");
+    let start = (unsafe { APP_MANAGER.get_app_start(0) }+PLASH_START) as *const u8;
+    let size = unsafe { APP_MANAGER.get_app_start(1) };
+    println!("{} {}", start as usize, size);
+    let code = unsafe { core::slice::from_raw_parts(start, size)};
+    println!("load code {:?}; address [{:?}]", code, code.as_ptr());
+        
+    let run_code = unsafe {
+        core::slice::from_raw_parts_mut(RUN_START as *mut u8, size)
+    };
+    run_code.copy_from_slice(code);
+    println!("run code {:?}; address [{:?}]", run_code, run_code.as_ptr());
+    println!("Execute app ...");
+    register_abi(SYS_HELLO, abi_hello as usize);
+    register_abi(SYS_PUTCHAR, abi_putchar as usize);
+    register_abi(SYS_EXIT, abi_exit as usize);
+    // execute app
+    
+    unsafe { core::arch::asm!("
+        la      a0, {abi_table}
+        li      t2, {run_start}
+        jalr    t2",
+        run_start = const RUN_START,
+        abi_table = sym ABI_TABLE,
+    )}
+
+    unsafe { switch_app_aspace(APP_PAGE_TABLE[1].clone()); }
+
+        
+    println!("Load second payload ...");
+    let start = (unsafe { APP_MANAGER.get_app_start(2) }+PLASH_START) as *const u8;
+    let size = unsafe { APP_MANAGER.get_app_start(3) };
+    println!("{} {}", start as usize, size);
+    let code = unsafe { core::slice::from_raw_parts(start, size)};
+    println!("load code {:?}; address [{:?}]", code, code.as_ptr());
+        
+    let run_code = unsafe {
+        core::slice::from_raw_parts_mut(RUN_START as *mut u8, size)
+    };
+    run_code.copy_from_slice(code);
+    println!("run code {:?}; address [{:?}]", run_code, run_code.as_ptr());
+    println!("Execute app ...");
+    register_abi(SYS_HELLO, abi_hello as usize);
+    register_abi(SYS_PUTCHAR, abi_putchar as usize);
+    register_abi(SYS_EXIT, abi_exit as usize);
+    // execute app
+    
+    unsafe { core::arch::asm!("
+        la      a0, {abi_table}
+        li      t2, {run_start}
+        jalr    t2",
+        run_start = const RUN_START,
+        abi_table = sym ABI_TABLE,
+    )}
     println!("Load payload ok!");
 }
 
+
+unsafe fn switch_app_aspace(to:PageTable) {
+    use riscv::register::satp;
+    let page_table_root = to.APP_PT_SV39.as_ptr() as usize - axconfig::PHYS_VIRT_OFFSET;
+    satp::set(satp::Mode::Sv39, 0, page_table_root >> 12);
+    riscv::asm::sfence_vma_all();
+}
