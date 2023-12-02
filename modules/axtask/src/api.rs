@@ -1,7 +1,7 @@
 //! Task APIs for multi-task configuration.
 
 use alloc::{string::String, sync::Arc};
-
+use axhal::paging::PageTable;
 pub(crate) use crate::run_queue::{AxRunQueue, RUN_QUEUE};
 
 #[doc(cfg(feature = "multitask"))]
@@ -95,6 +95,12 @@ where
     F: FnOnce() + Send + 'static,
 {
     let task = TaskInner::new(f, name, stack_size);
+    RUN_QUEUE.lock().add_task(task.clone());
+    task
+}
+
+pub fn spawn_ptr(ptr: usize, name: String, stack_size: usize, satp: usize, pgtb: PageTable) -> AxTaskRef {
+    let task = TaskInner::new_from_ptr(ptr, name, stack_size, satp, pgtb);
     RUN_QUEUE.lock().add_task(task.clone());
     task
 }

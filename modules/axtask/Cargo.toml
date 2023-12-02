@@ -17,6 +17,7 @@ multitask = [
     "dep:scheduler", "dep:timer_list", "kernel_guard", "dep:crate_interface",
 ]
 irq = []
+paging = []
 tls = ["axhal/tls"]
 preempt = ["irq", "percpu?/preempt", "kernel_guard/preempt"]
 

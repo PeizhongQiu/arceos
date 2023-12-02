@@ -11,7 +11,8 @@ use axhal::tls::TlsArea;
 
 use axhal::arch::TaskContext;
 use memory_addr::{align_up_4k, VirtAddr};
-
+#[cfg(feature = "paging")]
+use axhal::paging::PageTable;
 use crate::{AxRunQueue, AxTask, AxTaskRef, WaitQueue};
 
 /// A unique identifier for a thread.
@@ -55,6 +56,9 @@ pub struct TaskInner {
 
     #[cfg(feature = "tls")]
     tls: TlsArea,
+
+    #[cfg(feature = "paging")]
+    pgtb: Option<UnsafeCell<PageTable>>,
 }
 
 impl TaskId {
@@ -134,6 +138,8 @@ impl TaskInner {
             ctx: UnsafeCell::new(TaskContext::new()),
             #[cfg(feature = "tls")]
             tls: TlsArea::alloc(),
+            #[cfg(feature = "paging")]
+            pgtb: None,
         }
     }
 
@@ -157,6 +163,26 @@ impl TaskInner {
         if t.name == "idle" {
             t.is_idle = true;
         }
+        Arc::new(AxTask::new(t))
+    }
+
+    pub(crate) fn new_from_ptr(ptr: usize, name: String, stack_size: usize, satp: usize, pgtb: PageTable) -> AxTaskRef {
+        let mut t = Self::new_common(TaskId::new(), name);
+        info!("new task: {}", t.id_name());
+        let kstack = TaskStack::alloc(align_up_4k(stack_size));
+
+        #[cfg(feature = "tls")]
+        let tls = VirtAddr::from(t.tls.tls_ptr() as usize);
+        #[cfg(not(feature = "tls"))]
+        let tls = VirtAddr::from(0);
+
+        // TODO: this line of code is arch-specified
+        t.ctx.get_mut().init_with_satp(ptr as usize, kstack.top(), tls, satp);
+        t.kstack = Some(kstack);
+        if t.name == "idle" {
+            t.is_idle = true;
+        }
+        t.pgtb = Some(UnsafeCell::new(pgtb));
         Arc::new(AxTask::new(t))
     }
 

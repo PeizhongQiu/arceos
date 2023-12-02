@@ -6,11 +6,12 @@ authors = ["PeizhongQiu <qiupeizhong@gmail.com>"]
 
 
 [dependencies]
-axstd = { path = "../../ulib/axstd", features = ["alloc"], optional = true }
+axstd = { path = "../../ulib/axstd", features = ["alloc", "multitask", "paging", "irq", "sched_rr"], optional = true }
 axhal = { path = "../../modules/axhal" }
 axconfig = { path = "../../modules/axconfig" }
+axtask ={ path = "../../modules/axtask" }
 xmas-elf = "0.9.1"
-
+axalloc ={ path = "../../modules/axalloc"}
 
 [target.'cfg(any(target_arch = "riscv32", target_arch = "riscv64"))'.dependencies]
 riscv = "0.10"

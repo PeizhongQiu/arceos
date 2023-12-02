@@ -15,6 +15,7 @@ const RUN_START: usize = 0xffff_ffc0_8010_0000;
 
 
 static mut MAIN_ENTRY: [usize; 16] = [0; 16];
+static mut MAIN_INDEX: usize = 0;
 
 pub extern "C" fn puts(str: &[u8]) {
     let mut i:usize = 0;
@@ -36,7 +37,7 @@ pub extern "C" fn __libc_start_main() {
     unsafe { core::arch::asm!("
         mv      t2, {run_start}
         jalr    t2",
-        run_start = in(reg) MAIN_ENTRY[0],
+        run_start = in(reg) MAIN_ENTRY[MAIN_INDEX],
     )}   
     // exit
     // axhal::misc::terminate();
@@ -129,7 +130,9 @@ fn main() {
                 if iter.get_name(&elf).unwrap() == "main" {
                     let main_entry = iter.value();
                     println!("{:x}",main_entry);
-                    unsafe { MAIN_ENTRY[i] = RUN_START + main_entry as usize; }
+                    unsafe { MAIN_INDEX += 1 };
+                    unsafe { MAIN_ENTRY[MAIN_INDEX] = RUN_START + main_entry as usize; }
+                    
                 }
             }
         }

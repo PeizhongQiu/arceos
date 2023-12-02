@@ -126,9 +126,11 @@ dependencies = [
 name = "arceos-loader_mul"
 version = "0.1.0"
 dependencies = [
+ "axalloc",
  "axconfig",
  "axhal",
  "axstd",
+ "axtask",
  "riscv",
  "xmas-elf",
 ]
