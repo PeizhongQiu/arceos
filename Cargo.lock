@@ -397,6 +397,7 @@ dependencies = [
  "kernel_guard",
  "lazy_init",
  "lazy_static",
+ "memory_addr",
  "page_table",
  "page_table_entry",
  "percpu",
@@ -1774,6 +1775,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.18",
+]
+
+[[package]]
+name = "type1_5-helloworld"
+version = "0.1.0"
+dependencies = [
+ "libax",
 ]
 
 [[package]]

@@ -73,6 +73,9 @@ platform-qemu-virt-riscv = ["axhal/platform-qemu-virt-riscv", "bus-mmio"]
 platform-qemu-virt-aarch64 = ["axhal/platform-qemu-virt-aarch64", "bus-mmio"]
 platform-raspi4-aarch64 = ["axhal/platform-raspi4-aarch64", "bus-mmio"]
 
+# type1.5
+type1_5 = ["axhal/type1_5","axruntime/type1_5"]
+
 default = ["axtask?/sched_fifo"]
 
 [dependencies]

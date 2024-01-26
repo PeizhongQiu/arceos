@@ -7,6 +7,10 @@ SECTIONS
 {
     . = BASE_ADDRESS;
     skernel = .;
+    .header : {
+		sheader = .;
+		KEEP(*(.header))
+	}
 
     .text : ALIGN(4K) {
         stext = .;
@@ -64,6 +68,10 @@ SECTIONS
     }
     
     ekernel = .;
+    __core_end = .;
+
+	__entry_offset = _start - BASE_ADDRESS;
+	__core_size = __core_end - BASE_ADDRESS;
 
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)

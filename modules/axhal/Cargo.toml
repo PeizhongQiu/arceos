@@ -24,6 +24,7 @@ platform-raspi4-aarch64 = [
     "axconfig/platform-raspi4-aarch64",
     "dep:page_table_entry", "dep:ratio",
 ]
+type1_5 = []
 default = []
 hv = ["paging", "platform-qemu-virt-aarch64", "axconfig/hv"]
 

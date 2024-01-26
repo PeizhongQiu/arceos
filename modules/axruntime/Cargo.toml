@@ -15,6 +15,7 @@ paging = ["alloc", "axhal/paging", "dep:lazy_init"]
 irq = ["axhal/irq", "axtask?/irq"]
 multitask = ["alloc", "axtask/multitask"]
 smp = ["axhal/smp", "spinlock/smp"]
+type1_5 = []
 
 fs = ["alloc", "paging", "axdriver/virtio-blk", "dep:axfs"] # TODO: remove "paging"
 net = ["alloc", "paging", "axdriver/virtio-net", "dep:axnet"]
@@ -46,6 +47,7 @@ axtask = { path = "../axtask", default-features = false, optional = true }
 hypercraft = { path = "../../crates/hypercraft", optional = true }
 page_table = { path = "../../crates/page_table", optional = true }
 page_table_entry = { path = "../../crates/page_table_entry", features = ["hv"], optional = true }
+memory_addr = { path = "../../crates/memory_addr" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"

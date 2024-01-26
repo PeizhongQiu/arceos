@@ -16,6 +16,7 @@ members = [
     "apps/task/yield",
     "apps/task/priority",
     "apps/hv",
+    "apps/type1_5_helloworld",
 
     "crates/allocator",
     "crates/arm_gic",

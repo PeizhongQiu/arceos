@@ -21,6 +21,8 @@
 
 #[macro_use]
 extern crate axlog;
+#[macro_use]
+extern crate alloc;
 
 #[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
@@ -41,6 +43,11 @@ mod hv;
 pub use gpm::GuestPageTable;
 #[cfg(feature = "hv")]
 pub use hv::HyperCraftHalImpl;
+
+#[cfg(feature = "type1_5")]
+mod type1_5;
+#[cfg(feature = "type1_5")]
+use type1_5::start_type1_5;
 
 
 const LOGO: &str = r#"
@@ -247,6 +254,18 @@ fn init_allocator() {
                 .expect("add heap memory region failed");
         }
     }
+}
+
+/// type_1.5 
+#[cfg_attr(not(test), no_mangle)]
+pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> u32 {
+    ax_println!(
+        "[main]: cpuid: {}, linux_sp:{:x}",
+        cpu_id,
+        linux_sp
+    );
+    start_type1_5(cpu_id, linux_sp);
+    0
 }
 
 #[cfg(feature = "paging")]

@@ -77,3 +77,6 @@ pub use self::platform::platform_init;
 
 #[cfg(feature = "smp")]
 pub use self::platform::platform_init_secondary;
+
+#[cfg(feature = "type1_5")]
+pub use self::platform::rust_entry;
