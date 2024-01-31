@@ -5,6 +5,17 @@ use core::fmt;
 #[doc(no_inline)]
 pub use memory_addr::{PhysAddr, VirtAddr, PAGE_SIZE_4K};
 
+pub(super) static mut PHYS_VIRT_OFFSET: usize = 0;
+
+fn phys_virt_offset() -> usize{
+    
+    if cfg!(feature = "type1_5") {
+        axconfig::PHYS_VIRT_OFFSET
+    } else {
+        unsafe { PHYS_VIRT_OFFSET }
+    }
+}
+
 bitflags::bitflags! {
     /// The flags of a physical memory region.
     pub struct MemRegionFlags: usize {
@@ -71,8 +82,8 @@ impl Iterator for MemRegionIter {
 ///
 /// [`PHYS_VIRT_OFFSET`]: axconfig::PHYS_VIRT_OFFSET
 #[inline]
-pub const fn virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
-    PhysAddr::from(vaddr.as_usize() - axconfig::PHYS_VIRT_OFFSET)
+pub fn virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
+    PhysAddr::from(vaddr.as_usize() - phys_virt_offset())
 }
 
 /// Converts a physical address to a virtual address.
@@ -84,8 +95,8 @@ pub const fn virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
 ///
 /// [`PHYS_VIRT_OFFSET`]: axconfig::PHYS_VIRT_OFFSET
 #[inline]
-pub const fn phys_to_virt(paddr: PhysAddr) -> VirtAddr {
-    VirtAddr::from(paddr.as_usize() + axconfig::PHYS_VIRT_OFFSET)
+pub fn phys_to_virt(paddr: PhysAddr) -> VirtAddr {
+    VirtAddr::from(paddr.as_usize() + phys_virt_offset())
 }
 
 /// Returns an iterator over all physical memory regions.

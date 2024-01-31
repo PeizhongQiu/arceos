@@ -14,10 +14,10 @@ pub const PER_CPU_SIZE: usize = 512 * 1024; // 512 KB
 pub const HV_BASE: usize = 0xffff_ff00_0000_0000;
 
 /// Pointer of the `HvHeader` structure.
-pub const HV_HEADER_PTR: *const HvHeader = __header_start as _;
+pub const HV_HEADER_PTR: *const HvHeader = sheader as _;
 
 /// Pointer of the per-CPU data array.
-pub const PER_CPU_ARRAY_PTR: *mut PerCpu = __core_end as _;
+pub const PER_CPU_ARRAY_PTR: *mut PerCpu = ekernel as _;
 
 /// Pointer of the `HvSystemConfig` structure.
 pub fn hv_config_ptr() -> *const HvSystemConfig {
@@ -35,6 +35,6 @@ pub fn hv_end() -> VirtAddr {
 }
 
 extern "C" {
-    fn __header_start();
-    fn __core_end();
+    fn sheader();
+    fn ekernel();
 }

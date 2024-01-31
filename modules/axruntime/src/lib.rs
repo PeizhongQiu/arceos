@@ -257,14 +257,24 @@ fn init_allocator() {
 }
 
 /// type_1.5 
+#[cfg(feature = "type1_5")]
 #[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> u32 {
-    ax_println!(
-        "[main]: cpuid: {}, linux_sp:{:x}",
-        cpu_id,
-        linux_sp
-    );
-    start_type1_5(cpu_id, linux_sp);
+pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
+    let is_primary = cpu_id == 0;  
+    
+    // one core for arceos, one core for linux
+    if is_primary {
+        #[cfg(feature = "hv")]
+        unsafe {
+            main(cpu_id)
+        };
+
+        #[cfg(not(feature = "hv"))]
+        unsafe {
+            main()
+        };
+    } 
+    // start_type1_5(cpu_id, linux_sp);
     0
 }
 

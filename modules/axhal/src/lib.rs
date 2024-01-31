@@ -31,6 +31,7 @@
 #![feature(naked_functions)]
 #![feature(const_maybe_uninit_zeroed)]
 #![feature(doc_auto_cfg)]
+#![feature(stmt_expr_attributes)]
 
 #[allow(unused_imports)]
 #[macro_use]
@@ -77,6 +78,3 @@ pub use self::platform::platform_init;
 
 #[cfg(feature = "smp")]
 pub use self::platform::platform_init_secondary;
-
-#[cfg(feature = "type1_5")]
-pub use self::platform::rust_entry;

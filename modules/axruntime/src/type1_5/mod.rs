@@ -23,7 +23,7 @@ mod consts;
 
 use error::{HvError, HvErrorNum, HvResult};
 
-use axhal::rust_entry;
+// use axhal::rust_entry;
 
 // use percpu::PerCpu;
 
@@ -85,7 +85,7 @@ pub fn start_type1_5(cpu_id: u32, linux_sp: usize) -> HvResult {
     if is_primary {
         // primary_init_early_linux()?;
     } else { 
-        rust_entry();
+        // main();
     }
     // wait_for_counter(&INIT_EARLY_OK, online_cpus)?;
     // cpu_data.init(linux_sp, cell::root_cell())?;    
@@ -93,14 +93,14 @@ pub fn start_type1_5(cpu_id: u32, linux_sp: usize) -> HvResult {
     //     "[main]: cpudata: {:#?}",
     //     cpu_data
     // );
-    println!("CPU {} init OK.", cpu_id);
-    INITED_CPUS.fetch_add(1, Ordering::SeqCst);
-    wait_for_counter(&INITED_CPUS, online_cpus)?;
+    // println!("CPU {} init OK.", cpu_id);
+    // INITED_CPUS.fetch_add(1, Ordering::SeqCst);
+    // wait_for_counter(&INITED_CPUS, online_cpus)?;
 
     // if is_primary { 
     //     primary_init_late();
     // } else {    // 等待 primary_init_late 完成
-    //     wait_for_counter(&INIT_LATE_OK, 1)?
+    //     // wait_for_counter(&INIT_LATE_OK, 1)?
     // }
 
     // cpu_data.activate_vmm()

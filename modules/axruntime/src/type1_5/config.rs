@@ -5,7 +5,7 @@ use super::error::{HvError, HvErrorNum, HvResult};
 use alloc::string::String;
 use super::HvHeader;
 
-const CONFIG_SIGNATURE: [u8; 6] = *b"RVMSYS";
+const CONFIG_SIGNATURE: [u8; 6] = *b"AOSSYS";
 const CONFIG_REVISION: u16 = 10;
 pub const PER_CPU_ARRAY_PTR: *mut HvSystemConfig = __core_end as _;
 

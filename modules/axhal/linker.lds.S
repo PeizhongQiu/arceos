@@ -1,6 +1,6 @@
 OUTPUT_ARCH(%ARCH%)
 
-BASE_ADDRESS = %KERNEL_BASE%;
+BASE_ADDRESS = 0xffffff0000000000;
 
 ENTRY(_start)
 SECTIONS
@@ -68,10 +68,9 @@ SECTIONS
     }
     
     ekernel = .;
-    __core_end = .;
 
 	__entry_offset = _start - BASE_ADDRESS;
-	__core_size = __core_end - BASE_ADDRESS;
+	__core_size = ekernel - BASE_ADDRESS;
 
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)
