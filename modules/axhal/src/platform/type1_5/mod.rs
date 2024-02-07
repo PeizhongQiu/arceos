@@ -33,7 +33,7 @@ fn primary_init_early(cpu_id: u32) {
     crate::mem::clear_bss();
     crate::cpu::init_primary(cpu_id as usize);
     self::uart16550::init();
-    self::dtables::init_primary();
+    // self::dtables::init_primary();
     self::time::init_early();
     println!("primary_init_early OK!!!");
     INIT_EARLY_OK.store(1, Ordering::Release);

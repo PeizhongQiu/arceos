@@ -11,6 +11,7 @@
 use alloc::string::String;
 use axlog::ax_println as println;
 use core::sync::atomic::{AtomicI32, AtomicU32, Ordering};
+use axhal::mem;
 
 mod config;
 mod header;
@@ -49,6 +50,15 @@ fn wait_for(condition: impl Fn() -> bool) -> HvResult {
 
 fn wait_for_counter(counter: &AtomicU32, max_value: u32) -> HvResult {
     wait_for(|| counter.load(Ordering::Acquire) < max_value)
+}
+
+pub fn init_phys_virt_offset() {
+    // Set PHYS_VIRT_OFFSET early.
+    unsafe {
+        axhal::PHYS_VIRT_OFFSET =
+            consts::HV_BASE - HvSystemConfig::get().hypervisor_memory.phys_start as usize
+    };
+    unsafe {info!("init_PHYS_VIRT_OFFSET: {:x}",axhal::PHYS_VIRT_OFFSET)};
 }
 
 // fn primary_init_early_linux() -> HvResult {

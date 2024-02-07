@@ -145,6 +145,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "arceos-type1_5-hv"
+version = "0.1.0"
+dependencies = [
+ "arrayvec",
+ "bit_field",
+ "bitflags 2.3.2",
+ "fdt",
+ "lazy_static",
+ "libax",
+ "page_table_entry",
+ "raw-cpuid 11.0.1",
+ "spin 0.9.8",
+ "x2apic",
+ "x86",
+ "x86_64",
+]
+
+[[package]]
 name = "arceos-udpserver"
 version = "0.1.0"
 dependencies = [

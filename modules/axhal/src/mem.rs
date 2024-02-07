@@ -5,14 +5,14 @@ use core::fmt;
 #[doc(no_inline)]
 pub use memory_addr::{PhysAddr, VirtAddr, PAGE_SIZE_4K};
 
-pub(super) static mut PHYS_VIRT_OFFSET: usize = 0;
+pub static mut PHYS_VIRT_OFFSET: usize = 0;
 
 fn phys_virt_offset() -> usize{
     
     if cfg!(feature = "type1_5") {
-        axconfig::PHYS_VIRT_OFFSET
-    } else {
         unsafe { PHYS_VIRT_OFFSET }
+    } else {
+        axconfig::PHYS_VIRT_OFFSET
     }
 }
 

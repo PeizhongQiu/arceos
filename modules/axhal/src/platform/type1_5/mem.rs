@@ -27,7 +27,7 @@ pub(crate) fn memory_region_at(idx: usize) -> Option<MemRegion> {
             fn ekernel();
         }
         let start = virt_to_phys((ekernel as usize).into()).align_up_4k();
-        let end = PhysAddr::from(axconfig::PHYS_MEMORY_END).align_down_4k();
+        let end = PhysAddr::from(0x3a000000+0x5000000).align_down_4k();  // TODO:要动态加载 end
         Some(MemRegion {
             paddr: start,
             size: end.as_usize() - start.as_usize(),

@@ -48,7 +48,8 @@ pub use hv::HyperCraftHalImpl;
 mod type1_5;
 #[cfg(feature = "type1_5")]
 use type1_5::start_type1_5;
-
+#[cfg(feature = "type1_5")]
+use type1_5::init_phys_virt_offset;
 
 const LOGO: &str = r#"
        d8888                            .d88888b.   .d8888b.
@@ -238,18 +239,39 @@ fn init_allocator() {
     let mut max_region_paddr = 0.into();
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.size > max_region_size {
+            info!(
+                "1  [{:x?}, {:x?}) {} ({:?})",
+                r.paddr,
+                r.paddr + r.size,
+                r.name,
+                r.flags
+            );
             max_region_size = r.size;
             max_region_paddr = r.paddr;
         }
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
+            info!(
+                "2  [{:x?}, {:x?}) {} ({:?})",
+                r.paddr,
+                r.paddr + r.size,
+                r.name,
+                r.flags
+            );
             axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
             break;
         }
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr != max_region_paddr {
+            info!(
+                "3  [{:x?}, {:x?}) {} ({:?})",
+                r.paddr,
+                r.paddr + r.size,
+                r.name,
+                r.flags
+            );
             axalloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
                 .expect("add heap memory region failed");
         }
@@ -264,17 +286,107 @@ pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
     
     // one core for arceos, one core for linux
     if is_primary {
+        ax_println!("{}", LOGO);
+        ax_println!(
+            "\
+            arch = {}\n\
+            platform = {}\n\
+            smp = {}\n\
+            build_mode = {}\n\
+            log_level = {}\n\
+            ",
+            option_env!("ARCH").unwrap_or(""),
+            option_env!("PLATFORM").unwrap_or(""),
+            option_env!("SMP").unwrap_or(""),
+            option_env!("MODE").unwrap_or(""),
+            option_env!("LOG").unwrap_or(""),
+        );
+
+        axlog::init();
+        axlog::set_max_level(option_env!("LOG").unwrap_or("")); // no effect if set `log-level-*` features
+        info!("Logging is enabled.");
+        info!("Primary CPU {} started, linux_sp = {:#x}.", cpu_id, linux_sp);
+
+        // #[cfg(all(feature = "hv", target_arch = "riscv64"))]
+        // hypercraft::init_hv_runtime();
+
+        init_phys_virt_offset();
+        info!("Found physcial memory regions:");
+        for r in axhal::mem::memory_regions() {
+            info!(
+                "  [{:x?}, {:x?}) {} ({:?})",
+                r.paddr,
+                r.paddr + r.size,
+                r.name,
+                r.flags
+            );
+        }
+
+        #[cfg(feature = "alloc")]
+        {
+            info!("Initialize global memory allocator...");
+            init_allocator();
+        }
+
+        info!("Initialize platform devices...");
+        axhal::platform_init();
+
+        #[cfg(feature = "multitask")]
+        axtask::init_scheduler();
+
+        #[cfg(any(feature = "fs", feature = "net", feature = "display"))]
+        {
+            #[allow(unused_variables)]
+            let all_devices = axdriver::init_drivers();
+
+            #[cfg(feature = "fs")]
+            axfs::init_filesystems(all_devices.block);
+
+            #[cfg(feature = "net")]
+            axnet::init_network(all_devices.net);
+
+            #[cfg(feature = "display")]
+            axdisplay::init_display(all_devices.display);
+        }
+
+        // #[cfg(feature = "smp")]
+        // self::mp::start_secondary_cpus(cpu_id);
+
+        #[cfg(feature = "irq")]
+        {
+            info!("Initialize interrupt handlers...");
+            init_interrupt();
+        }
+
+        // info!("Primary CPU {} init OK.", cpu_id);
+        // INITED_CPUS.fetch_add(1, Ordering::Relaxed);
+
+        // while !is_init_ok() {
+        //     core::hint::spin_loop();
+        // }
+        info!("enter main()...");
         #[cfg(feature = "hv")]
         unsafe {
-            main(cpu_id)
+            main(cpu_id as usize)
         };
 
         #[cfg(not(feature = "hv"))]
         unsafe {
             main()
         };
-    } 
-    // start_type1_5(cpu_id, linux_sp);
+
+        #[cfg(feature = "multitask")]
+        axtask::exit(0);
+        #[cfg(not(feature = "multitask"))]
+        {
+            debug!("main task exited: exit_code={}", 0);
+            axhal::misc::terminate();
+        }
+    } else {
+        loop {
+            ;
+        }
+    }
     0
 }
 
@@ -339,5 +451,6 @@ fn init_interrupt() {
     }
     */
     // Enable IRQs before starting app
+    #[cfg(not(feature = "type1_5"))]
     axhal::arch::enable_irqs();
 }

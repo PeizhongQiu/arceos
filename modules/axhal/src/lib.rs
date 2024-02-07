@@ -78,3 +78,6 @@ pub use self::platform::platform_init;
 
 #[cfg(feature = "smp")]
 pub use self::platform::platform_init_secondary;
+
+#[cfg(feature = "type1_5")]
+pub use mem::PHYS_VIRT_OFFSET;
