@@ -46,10 +46,17 @@ pub use hv::HyperCraftHalImpl;
 
 #[cfg(feature = "type1_5")]
 mod type1_5;
-#[cfg(feature = "type1_5")]
-use type1_5::start_type1_5;
+
 #[cfg(feature = "type1_5")]
 use type1_5::init_phys_virt_offset;
+#[cfg(feature = "type1_5")]
+use type1_5::init_cell;
+#[cfg(feature = "type1_5")]
+use type1_5::init_allocator_type1_5;
+#[cfg(feature = "type1_5")]
+use type1_5::activate_hv_pt;
+#[cfg(feature = "type1_5")]
+use hypercraft::LinuxContext;
 
 const LOGO: &str = r#"
        d8888                            .d88888b.   .d8888b.
@@ -63,6 +70,10 @@ d88P     888 888      "Y8888P  "Y8888   "Y88888P"   "Y8888P"
 "#;
 
 extern "C" {
+    #[cfg(feature = "type1_5")]
+    #[cfg(feature = "hv")]
+    fn main(cpu_id: usize, npt: usize, linux: &LinuxContext);
+    #[cfg(not(feature = "type1_5"))]
     #[cfg(feature = "hv")]
     fn main(cpu_id: usize);
     #[cfg(not(feature = "hv"))]
@@ -124,6 +135,7 @@ fn is_init_ok() -> bool {
 /// In multi-core environment, this function is called on the primary CPU,
 /// and the secondary CPUs call [`rust_main_secondary`].
 #[cfg_attr(not(test), no_mangle)]
+#[cfg(not(feature = "type1_5"))]
 pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     ax_println!("{}", LOGO);
     ax_println!(
@@ -239,39 +251,18 @@ fn init_allocator() {
     let mut max_region_paddr = 0.into();
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.size > max_region_size {
-            info!(
-                "1  [{:x?}, {:x?}) {} ({:?})",
-                r.paddr,
-                r.paddr + r.size,
-                r.name,
-                r.flags
-            );
             max_region_size = r.size;
             max_region_paddr = r.paddr;
         }
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-            info!(
-                "2  [{:x?}, {:x?}) {} ({:?})",
-                r.paddr,
-                r.paddr + r.size,
-                r.name,
-                r.flags
-            );
             axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
             break;
         }
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr != max_region_paddr {
-            info!(
-                "3  [{:x?}, {:x?}) {} ({:?})",
-                r.paddr,
-                r.paddr + r.size,
-                r.name,
-                r.flags
-            );
             axalloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
                 .expect("add heap memory region failed");
         }
@@ -311,63 +302,36 @@ pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
         // hypercraft::init_hv_runtime();
 
         init_phys_virt_offset();
-        info!("Found physcial memory regions:");
-        for r in axhal::mem::memory_regions() {
-            info!(
-                "  [{:x?}, {:x?}) {} ({:?})",
-                r.paddr,
-                r.paddr + r.size,
-                r.name,
-                r.flags
-            );
-        }
 
         #[cfg(feature = "alloc")]
         {
             info!("Initialize global memory allocator...");
-            init_allocator();
+            init_allocator_type1_5();
         }
+
+        info!("init cell");
+        let npt = init_cell();
+
+        info!("load LinuxContext");
+        let linux = LinuxContext::load_from(linux_sp);
+        info!("{:x?}",linux);
 
         info!("Initialize platform devices...");
         axhal::platform_init();
 
-        #[cfg(feature = "multitask")]
-        axtask::init_scheduler();
-
-        #[cfg(any(feature = "fs", feature = "net", feature = "display"))]
-        {
-            #[allow(unused_variables)]
-            let all_devices = axdriver::init_drivers();
-
-            #[cfg(feature = "fs")]
-            axfs::init_filesystems(all_devices.block);
-
-            #[cfg(feature = "net")]
-            axnet::init_network(all_devices.net);
-
-            #[cfg(feature = "display")]
-            axdisplay::init_display(all_devices.display);
-        }
-
-        // #[cfg(feature = "smp")]
-        // self::mp::start_secondary_cpus(cpu_id);
-
-        #[cfg(feature = "irq")]
-        {
-            info!("Initialize interrupt handlers...");
-            init_interrupt();
-        }
-
-        // info!("Primary CPU {} init OK.", cpu_id);
-        // INITED_CPUS.fetch_add(1, Ordering::Relaxed);
-
-        // while !is_init_ok() {
-        //     core::hint::spin_loop();
+        // #[cfg(feature = "irq")]
+        // {
+        //     info!("Initialize interrupt handlers...");
+        //     init_interrupt();
         // }
+
+        info!("activate_hv_pt");
+        activate_hv_pt();
+
         info!("enter main()...");
         #[cfg(feature = "hv")]
         unsafe {
-            main(cpu_id as usize)
+            main(cpu_id as usize, npt, &linux)
         };
 
         #[cfg(not(feature = "hv"))]

@@ -10,8 +10,17 @@
 
 use alloc::string::String;
 use axlog::ax_println as println;
+use memory_addr::PhysAddr;
 use core::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 use axhal::mem;
+use axhal::{
+    mem::VirtAddr,
+    paging::{MappingFlags, PageTable},
+};
+use axhal::mem::virt_to_phys;
+use axhal::mem::phys_to_virt;
+use spin::{Once, RwLock};
+use config::MemFlags;
 
 mod config;
 mod header;
@@ -20,13 +29,15 @@ mod percpu;
 use config::HvSystemConfig;
 use header::HvHeader;
 mod consts;
-// mod cell;
+mod cell;
+mod mm;
 
 use error::{HvError, HvErrorNum, HvResult};
 
-// use axhal::rust_entry;
+use crate::type1_5::cell::root_cell;
 
-// use percpu::PerCpu;
+/// Page table used for hypervisor.
+static HV_PT: Once<RwLock<PageTable>> = Once::new();
 
 static INITED_CPUS: AtomicU32 = AtomicU32::new(0);
 static INIT_EARLY_OK: AtomicU32 = AtomicU32::new(0);
@@ -61,59 +72,89 @@ pub fn init_phys_virt_offset() {
     unsafe {info!("init_PHYS_VIRT_OFFSET: {:x}",axhal::PHYS_VIRT_OFFSET)};
 }
 
-// fn primary_init_early_linux() -> HvResult {
-//     let system_config = HvSystemConfig::get();
-//     println!(
-//         "\nInitializing hypervisor...\n"
-//     );
-
-//     // memory::init_heap();    // 分配一段 32 MB 内存，初始化 PHYS_VIRT_OFFSET
-//     system_config.check()?; // 检查 signature 和 revision
-//     println!("Hypervisor header: {:#x?}", HvHeader::get());
-//     println!("System config: {:#x?}", system_config);
-
-//     // memory::init_frame_allocator(); // 初始化物理内存分配器
-//     // memory::init_hv_page_table()?;  // 初始化 HV_PT，hypervisor 用的页表
-//     cell::init()?;  // 初始化 ROOT_CELL，包括页表和 CellConfig
-
-//     INIT_EARLY_OK.store(1, Ordering::Release);
-//     Ok(())
-// }
-
-fn primary_init_late() {
-    info!("Primary CPU init late...");
-    // Do nothing...
-    INIT_LATE_OK.store(1, Ordering::Release);
+pub fn init_cell() -> usize{
+    cell::init();
+    info!("{:#x?}", root_cell().gpm);
+    root_cell().gpm.nest_page_table_root()
 }
 
+pub fn init_allocator_type1_5() {
+    let mem_pool_start = consts::free_memory_start();
+    let mem_pool_end = consts::hv_end().align_down_4k();
 
-pub fn start_type1_5(cpu_id: u32, linux_sp: usize) -> HvResult {
-    let is_primary = cpu_id == 0;  
-    let online_cpus = HvHeader::get().online_cpus; // 2
+    let mem_pool_size = mem_pool_end.as_usize() - mem_pool_start.as_usize();
+    info!("global_init start:{:x}, end:{:x}.",mem_pool_start,mem_pool_end);
+    axalloc::global_init(mem_pool_start.as_usize(), mem_pool_size);
     
-    // one core for arceos, one core for linux
-    if is_primary {
-        // primary_init_early_linux()?;
-    } else { 
-        // main();
+    let header = HvHeader::get();
+    let sys_config = HvSystemConfig::get();
+    let cell_config = sys_config.root_cell.config();
+    let hv_phys_start = sys_config.hypervisor_memory.phys_start as usize;
+    let hv_phys_size = sys_config.hypervisor_memory.size as usize;
+    info!("create PageTable.");
+    let mut page_table = PageTable::try_new().unwrap();
+    
+    page_table.map_region(
+        consts::HV_BASE.into(),
+        hv_phys_start.into(),
+        header.core_size,
+        MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE,
+        false,
+    );
+    info!("map_region {:x},{:x},{:x},{:?},{}.",
+    consts::HV_BASE,
+    hv_phys_start,
+    header.core_size,
+    MappingFlags::READ | MappingFlags::WRITE | MappingFlags::EXECUTE,
+    false);
+    page_table.map_region(
+        (consts::HV_BASE + header.core_size).into(),
+        (hv_phys_start + header.core_size).into(),
+        hv_phys_size - header.core_size,
+        MappingFlags::READ | MappingFlags::WRITE,
+        false,
+    );
+    info!("map_region {:x},{:x},{:x},{:?},{}.",
+    consts::HV_BASE + header.core_size,
+        hv_phys_start + header.core_size,
+        hv_phys_size - header.core_size,
+        MappingFlags::READ | MappingFlags::WRITE,
+        false);
+    // Map all guest RAM to directly access in hypervisor.
+    for region in cell_config.mem_regions() {
+        let flags = region.flags; 
+        if flags.contains(MemFlags::DMA) {
+            let hv_virt_start = phys_to_virt(PhysAddr::from(region.virt_start as _));
+            if hv_virt_start < VirtAddr::from(region.virt_start as _) {
+                let virt_start = region.virt_start;
+                panic!(
+                        "Guest physical address {:#x} is too large",
+                        virt_start
+                );
+            }
+            page_table.map_region(
+                hv_virt_start,
+                PhysAddr::from(region.phys_start as _),
+                region.size as usize,
+                MappingFlags::READ | MappingFlags::WRITE,
+                false
+            );
+            info!("map_region {:x},{:x},{:x},{:?},{}.",
+            hv_virt_start.as_usize(),
+            region.phys_start as usize,
+            region.size as usize,
+            MappingFlags::READ | MappingFlags::WRITE,
+            false);
+        }
     }
-    // wait_for_counter(&INIT_EARLY_OK, online_cpus)?;
-    // cpu_data.init(linux_sp, cell::root_cell())?;    
-    // println!(
-    //     "[main]: cpudata: {:#?}",
-    //     cpu_data
-    // );
-    // println!("CPU {} init OK.", cpu_id);
-    // INITED_CPUS.fetch_add(1, Ordering::SeqCst);
-    // wait_for_counter(&INITED_CPUS, online_cpus)?;
-
-    // if is_primary { 
-    //     primary_init_late();
-    // } else {    // 等待 primary_init_late 完成
-    //     // wait_for_counter(&INIT_LATE_OK, 1)?
-    // }
-
-    // cpu_data.activate_vmm()
-    Ok(())
+    info!("Hypervisor page table init end.");
+    // info!("Hypervisor virtual memory set: {:#x?}", page_table);
+    
+    HV_PT.call_once(|| RwLock::new(page_table));
 }
 
+pub fn activate_hv_pt() {
+    info!("activate_hv_pt!!!");
+    let page_table = HV_PT.get().expect("Uninitialized hypervisor page table!");
+    unsafe { axhal::arch::write_page_table_root(page_table.read().root_paddr()) };
+}

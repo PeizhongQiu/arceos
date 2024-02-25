@@ -4,10 +4,10 @@ use bitflags::bitflags;
 use super::error::{HvError, HvErrorNum, HvResult};
 use alloc::string::String;
 use super::HvHeader;
+use page_table_entry::MappingFlags;
 
 const CONFIG_SIGNATURE: [u8; 6] = *b"AOSSYS";
 const CONFIG_REVISION: u16 = 10;
-pub const PER_CPU_ARRAY_PTR: *mut HvSystemConfig = __core_end as _;
 
 const HV_CELL_NAME_MAXLEN: usize = 31;
 const HV_MAX_IOMMU_UNITS: usize = 8;
@@ -23,9 +23,7 @@ bitflags! {
         const USER          = 1 << 9;
     }
 }
-extern "C" {
-    fn __core_end();
-}
+
 #[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
 struct HvConsole {

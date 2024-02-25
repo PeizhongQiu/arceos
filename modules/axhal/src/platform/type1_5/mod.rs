@@ -30,10 +30,10 @@ extern "C" {
 
 
 fn primary_init_early(cpu_id: u32) {
-    crate::mem::clear_bss();
+    // crate::mem::clear_bss();
     crate::cpu::init_primary(cpu_id as usize);
     self::uart16550::init();
-    // self::dtables::init_primary();
+    
     self::time::init_early();
     println!("primary_init_early OK!!!");
     INIT_EARLY_OK.store(1, Ordering::Release);
@@ -49,17 +49,19 @@ extern "sysv64" fn rust_entry_hv(cpu_id: u32, linux_sp: usize) -> i32 {
         }
     }
     let ret = unsafe { rust_main_type1_5(cpu_id, linux_sp) };
-    // println!(
-    //     "CPU {} return back to driver with code {}.",
-    //     cpuid, ret
-    // );
+    println!(
+        "CPU {} return back to driver with code {}.",
+        cpu_id, ret
+    );
     ret
 }
 
 
 /// Initializes the platform devices for the primary CPU.
 pub fn platform_init() {
-    self::apic::init_primary();
-    self::time::init_primary();
+
+    self::dtables::init_primary();
+    // self::apic::init_primary();
+    // self::time::init_primary();
 }
 

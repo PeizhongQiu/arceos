@@ -12,7 +12,7 @@ pub use hypercraft::{PerCpu, VCpu, VmCpus, VM};
 #[cfg(not(target_arch = "aarch64"))]
 pub use hypercraft::{HyperCallMsg, VmExitInfo, GuestPhysAddr, GuestVirtAddr, HostPhysAddr, HostVirtAddr};
 #[cfg(target_arch = "x86_64")]
-pub use hypercraft::{PerCpuDevices, PerVmDevices, VmxExitReason};
+pub use hypercraft::{PerCpuDevices, PerVmDevices, VmxExitReason, LinuxContext};
 
 #[cfg(target_arch = "x86_64")]
 pub fn dispatch_host_irq(vector: usize) -> Result {

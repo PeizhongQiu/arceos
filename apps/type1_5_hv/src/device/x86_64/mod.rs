@@ -143,7 +143,7 @@ impl<H: HyperCraftHal> DeviceList<H> {
             match dev.lock().write(msr, value) {
                 Ok(_) => {   
                     trace!("VM exit: WRMSR({:#x}) <- {:#x}", msr, value);
-                    
+                    info!("VM exit: WRMSR({:#x}) <- {:#x}", msr, value);
                     vcpu.advance_rip(VM_EXIT_INSTR_LEN_WRMSR)?;
                     Ok(())
                 },

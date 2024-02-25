@@ -1,5 +1,5 @@
 
-use core::sync::atomic::{AtomicU32, Ordering};
+
 use super::percpu::current_cpu_id;
 
 extern "C" {
@@ -11,9 +11,19 @@ pub const PER_CPU_SIZE: usize = 512 * 1024; // 512 KB
 unsafe extern "sysv64" fn switch_stack(linux_sp: usize) -> i32 {
     let linux_tp = x86::msr::rdmsr(x86::msr::IA32_GS_BASE) as u64;
     let cpu_id = current_cpu_id();
-    let per_cpu_array_ptr: usize = ekernel as usize + cpu_id as usize * PER_CPU_SIZE;;
+    let per_cpu_array_ptr: usize = ekernel as usize + cpu_id as usize * PER_CPU_SIZE;
+    // unsafe {
+    //     core::ptr::write_volatile(per_cpu_array_ptr as *mut usize, per_cpu_array_ptr);
+    // }
+    // unsafe { x86::msr::wrmsr(x86::msr::IA32_GS_BASE, per_cpu_array_ptr as u64) };
     let hv_sp = per_cpu_array_ptr + PER_CPU_SIZE - 8;
     let ret;
+    // let cpu_data = match PerCpu::new() {
+    //     Ok(c) => c,
+    //     Err(e) => return -1,
+    // };
+    // let hv_sp = cpu_data.stack_top();
+    // let ret;
     core::arch::asm!("
         mov [rsi], {linux_tp}   // save gs_base to stack
         mov rcx, rsp

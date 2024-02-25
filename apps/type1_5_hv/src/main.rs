@@ -9,7 +9,7 @@ extern crate libax;
 use libax::{
     hv::{
         self, GuestPageTable, GuestPageTableTrait, HyperCallMsg, HyperCraftHalImpl, PerCpu, Result,
-        VCpu, VmCpus, VmExitInfo, VM, phys_to_virt,
+        VCpu, VmCpus, VmExitInfo, VM, phys_to_virt, LinuxContext
     },
     info,
 };
@@ -19,46 +19,49 @@ use page_table_entry::MappingFlags;
 #[cfg(target_arch = "x86_64")]
 use device::{X64VcpuDevices, X64VmDevices};
 
-
 #[cfg(target_arch = "x86_64")]
-mod x64;
-
 #[cfg(target_arch = "x86_64")]
 #[path = "device/x86_64/mod.rs"]
 mod device;
 
+extern "C" {
+    fn ekernel();
+}
+/// Size of the per-CPU data (stack and other CPU-local data).
+pub const PER_CPU_SIZE: u64 = 512 * 1024; // 512 KB
+
 #[no_mangle]
-fn main(hart_id: usize) {
+fn main(cpu_id: usize, npt: usize, linux: &LinuxContext) {
+    
     println!("Hello, hv!");
 
     #[cfg(target_arch = "x86_64")]
     {
-        println!("into main {}", hart_id);
+        info!("{:x?}",linux);
+        println!("into main {}", cpu_id);
 
-        let mut p = PerCpu::<HyperCraftHalImpl>::new(hart_id);
+        let mut p = PerCpu::<HyperCraftHalImpl>::new(cpu_id);
         info!("PerCpu");
         p.hardware_enable().unwrap();
         info!("hardware_enable");
-        let gpm = x64::setup_gpm(hart_id).unwrap();
-        info!("gpm");
-        let npt = gpm.nest_page_table_root();
-        info!("{:#x?}", gpm);
 
         let mut vcpus = VmCpus::<HyperCraftHalImpl, X64VcpuDevices<HyperCraftHalImpl>>::new();
         info!("new vcpus");
-        vcpus.add_vcpu(VCpu::new(0, p.vmcs_revision_id(), 0x7c00, npt).unwrap());
+        let per_cpu_array_ptr: u64 = ekernel as u64 + cpu_id as u64 * PER_CPU_SIZE;
+        let hv_sp = per_cpu_array_ptr + PER_CPU_SIZE - 8;
+        vcpus.add_vcpu(VCpu::new_linux_sp(0, p.vmcs_revision_id(), &linux, hv_sp, npt).unwrap());
         info!("add_vcpu");
         let mut vm = VM::<HyperCraftHalImpl, X64VcpuDevices<HyperCraftHalImpl>, X64VmDevices<HyperCraftHalImpl>>::new(vcpus);
         info!("new vm");
         vm.bind_vcpu(0);
         info!("bind_vcpu");
-        // if hart_id == 0 {
+        // if cpu_id == 0 {
         //     let (_, dev) = vm.get_vcpu_and_device(0).unwrap();
         //     *(dev.console.lock().backend()) = device::device_emu::MultiplexConsoleBackend::Primary;
 
-        //     for v in 0..256 {
-        //         libax::hv::set_host_irq_enabled(v, true);
-        //     }
+        //     // for v in 0..256 {
+        //     //     libax::hv::set_host_irq_enabled(v, true);
+        //     // }
         // }
 
         println!("Running guest...");

@@ -36,6 +36,8 @@ bitflags::bitflags! {
         const USER          = 1 << 3;
         /// The memory is device memory.
         const DEVICE        = 1 << 4;
+
+        const NO_HUGEPAGES  = 1 << 8;
     }
 }
 
