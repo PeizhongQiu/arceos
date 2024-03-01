@@ -316,8 +316,6 @@ pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
         let linux = LinuxContext::load_from(linux_sp);
         info!("{:x?}",linux);
 
-        info!("Initialize platform devices...");
-        axhal::platform_init();
 
         // #[cfg(feature = "irq")]
         // {
@@ -327,7 +325,8 @@ pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
 
         info!("activate_hv_pt");
         activate_hv_pt();
-
+        info!("Initialize platform devices...");
+        axhal::platform_init();
         info!("enter main()...");
         #[cfg(feature = "hv")]
         unsafe {
@@ -347,9 +346,9 @@ pub extern "C" fn rust_main_type1_5(cpu_id: u32, linux_sp: usize) -> i32 {
             axhal::misc::terminate();
         }
     } else {
-        loop {
-            ;
-        }
+        // loop {
+        //     ;
+        // }
     }
     0
 }
