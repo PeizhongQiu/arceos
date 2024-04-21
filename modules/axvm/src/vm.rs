@@ -2,14 +2,12 @@ use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[cfg(feature = "type1_5")]
 use hypercraft::LinuxContext;
-use hypercraft::{PerCpu, VCpu, VmCpus, VM};
+use hypercraft::{VCpu, VmCpus, VM};
 
 use super::arch::new_vcpu;
 #[cfg(target_arch = "x86_64")]
-use super::device::{self, X64VcpuDevices, X64VmDevices};
-use crate::{phys_to_virt, PhysAddr};
+use super::device::{X64VcpuDevices, X64VmDevices};
 use axhal::hv::HyperCraftHalImpl;
-use axhal::mem::PAGE_SIZE_4K;
 
 use crate::config::entry::vm_cfg_entry;
 
