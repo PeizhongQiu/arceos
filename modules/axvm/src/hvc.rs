@@ -139,12 +139,16 @@ fn ax_hvc_create_vm(cfg: &mut AxVMCreateArg) -> Result<u32> {
 
     vm_cfg_entry.memory_region_editor(mm_setup_fn);
 
+    // Alloc physical memory region for guest ram memory.
+    // Skip those regions whose flag contains `MappingFlags::DEVICE`.
     vm_cfg_entry.set_up_memory_region()?;
 
     // These fields should be set by hypervisor and read by Linux kernel module.
+    // These address are where the Linux kernel module driver should copy images to.
     (cfg.bios_load_hpa, cfg.kernel_load_hpa, cfg.ramdisk_load_hpa) =
         vm_cfg_entry.get_img_load_info();
 
+    // Finally, add newly allocated `VMCfgEntry` to the global list.
     let vm_id = vm_cfg_add_vm_entry(vm_cfg_entry)?;
 
     // This field should be set by hypervisor and read by Linux kernel module.

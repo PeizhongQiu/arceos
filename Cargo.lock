@@ -552,7 +552,6 @@ dependencies = [
  "log",
  "memory_addr",
  "page_table_entry",
- "pci",
  "percpu",
  "raw-cpuid 11.0.1",
  "spin 0.9.8",

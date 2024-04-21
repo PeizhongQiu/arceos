@@ -37,7 +37,7 @@ lazy_init = { path = "../../crates/lazy_init" }
 hypercraft = { path = "../../crates/hypercraft" }
 memory_addr = { path = "../../crates/memory_addr" }
 page_table_entry = { path = "../../crates/page_table_entry", features = ["hv"] }
-pci = { path = "../../crates/pci" }
+# pci = { path = "../../crates/pci" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86 = "0.52"

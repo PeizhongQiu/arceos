@@ -1,4 +1,4 @@
-use hypercraft::PioOps;
+use super::PortIoDevice;
 
 use crate::Result as HyperResult;
 
@@ -9,14 +9,11 @@ pub struct Dummy {
 
 impl Dummy {
     pub fn new(port_base: u16, port_count: u16) -> Self {
-        Self {
-            port_base,
-            port_count,
-        }
-    }
+        Self { port_base, port_count }
+    } 
 }
 
-impl PioOps for Dummy {
+impl PortIoDevice for Dummy {
     fn port_range(&self) -> core::ops::Range<u16> {
         self.port_base..self.port_base + self.port_count
     }

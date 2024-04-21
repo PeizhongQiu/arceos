@@ -16,8 +16,8 @@ extern crate alloc;
 
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate pci;
+// #[macro_use]
+// extern crate pci;
 
 mod config;
 // #[cfg(target_arch = "x86_64")]
