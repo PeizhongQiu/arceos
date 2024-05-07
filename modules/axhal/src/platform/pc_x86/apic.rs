@@ -153,8 +153,9 @@ pub(super) fn init_primary() {
         let base_vaddr = phys_to_virt(PhysAddr::from(unsafe { xapic_base() } as usize));
         builder.set_xapic_base(base_vaddr.as_usize() as u64);
     }
-    let lapic = builder.build().unwrap();
+    let mut lapic = builder.build().unwrap();
     unsafe {
+        // lapic.enable();
         LOCAL_APIC = Some(lapic);
     }
 

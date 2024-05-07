@@ -36,10 +36,10 @@ echo_workspace:
 	echo ${WORKSPACE}
 
 qemu: $(qemu_image)
-	$(QEMU) $(qemu_args)
+	sudo $(QEMU) $(qemu_args)
 
 qemu_debug: $(qemu_image)
-	$(QEMU) $(qemu_args) -s -S
+	sudo $(QEMU) $(qemu_args) -s -S
 
 qemu_gdb:
 	gdb $(OUT_ELF) \

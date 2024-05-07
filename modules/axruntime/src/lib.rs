@@ -259,6 +259,11 @@ pub extern "C" fn rust_main(cpu_id: u32, linux_sp: usize) -> i32 {
                 axtask::init_scheduler();
             }
         }
+        // #[cfg(feature = "irq")]
+        // {
+        //     info!("Initialize interrupt handlers...");
+        //     init_interrupt();
+        // }
         INIT_SYNC.fetch_add(1, Ordering::Release);
     } else {
         info!("Secondary Initialize platform devices...");
@@ -266,9 +271,13 @@ pub extern "C" fn rust_main(cpu_id: u32, linux_sp: usize) -> i32 {
             core::hint::spin_loop();
         }
         axhal::platform_init_secondary();
-        #[cfg(feature = "multitask")]
-        axtask::init_scheduler_secondary();
-
+        #[cfg(feature = "multitask")] {
+            info!("CPU1 init_scheduler_secondary");
+            axtask::init_scheduler_secondary();
+        }
+        
+        // #[cfg(feature = "irq")]
+        // axhal::arch::enable_irqs();
         INIT_SYNC.fetch_add(1, Ordering::Release);
     }
 
@@ -380,11 +389,18 @@ fn init_interrupt() {
 
     #[percpu::def_percpu]
     static NEXT_DEADLINE: u64 = 0;
+    // #[percpu::def_percpu]
+    // static COUNT: u64 = 0;
 
     fn update_timer() {
         let now_ns = axhal::time::current_time_nanos();
         // Safety: we have disabled preemption in IRQ handler.
         let mut deadline = unsafe { NEXT_DEADLINE.read_current_raw() };
+        // let mut count = unsafe { COUNT.read_current_raw() };
+        // unsafe { COUNT.write_current_raw(count + 1) };
+        // if axhal::cpu::this_cpu_id() == 1 {
+        //     info!("update_timer:{count}");
+        // }
         if now_ns >= deadline {
             deadline = now_ns + PERIODIC_INTERVAL_NANOS;
         }

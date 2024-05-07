@@ -93,7 +93,7 @@ pub fn platform_init() {
 pub fn platform_init_secondary() {
     self::dtables::init_secondary();
     // self::apic::init_secondary();
-    // self::time::init_primary();
+    // self::time::init_secondary();
 }
 
 /// Initializes the platform devices for secondary CPUs.

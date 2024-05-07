@@ -175,10 +175,15 @@ fn ax_hvc_boot_vm(vm_id: usize) {
     let msg = NmiMessage::BootVm(vm_id);
     for i in 0..num_bits {
         if cpuset & (1 << i) != 0 {
-            info!("CPU{} send nmi ipi to CPU{} ", current_cpu, i);
-            // axhal::irq::send_nmi_to(i);
-            nmi_send_msg(i, msg);
-            // todo!();
+            if current_cpu == i {
+                crate::vm::boot_vm(vm_id);
+            } else {
+                info!("CPU{} send nmi ipi to CPU{} ", current_cpu, i);
+                // axhal::irq::send_nmi_to(i);
+                nmi_send_msg(i, msg);
+                // todo!();
+            }
+            
         }
     }
 }

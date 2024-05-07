@@ -239,6 +239,7 @@ impl VirtLocalApic {
     }
 
     fn read_msr(&mut self, msr: u32) -> HyperResult<u64> {
+        info!("read {msr}");
         let apic_timer = &mut self.inner;
         let offset = msr - 0x800;
         match offset {
@@ -262,6 +263,7 @@ impl VirtLocalApic {
     }
 
     fn write_msr(&mut self, msr: u32, value: u64) -> HyperResult {
+        info!("write {msr}");
         let apic_timer = &mut self.inner;
         let offset = msr - 0x800;
 
@@ -305,13 +307,17 @@ impl VirtMsrDevice for ApicBaseMsrHandler {
     }
 
     fn read(&mut self, msr: u32) -> HyperResult<u64> {
+        
         let _ = msr;
         let mut apic_base = unsafe { x86::msr::rdmsr(x86::msr::IA32_APIC_BASE) };
+        // apic_base &=  !(1 << 11 | 1 << 10); // disable xAPIC and x2APIC
         apic_base |= 1 << 11 | 1 << 10; // enable xAPIC and x2APIC
+        info!("read IA32_APIC_BASE: {apic_base:x}");
         Ok(apic_base)
     }
 
     fn write(&mut self, _msr: u32, _value: u64) -> HyperResult {
+        info!("write IA32_APIC_BASE");
         Ok(())
     }
 }

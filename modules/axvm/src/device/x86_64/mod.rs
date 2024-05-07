@@ -12,7 +12,7 @@ use bit_field::BitField;
 use core::marker::PhantomData;
 use spin::Mutex;
 
-use device_emu::{ApicBaseMsrHandler, Bundle, PortIoDevice, VirtLocalApic, VirtMsrDevice};
+use device_emu::{ApicBaseMsrHandler, Bundle, PortIoDevice, VirtLocalApic, VirtMsrDevice, Ia32UmwaitControl};
 // use hypercraft::{PortIoDevice, VirtMsrDevice};
 
 const VM_EXIT_INSTR_LEN_RDMSR: u8 = 2;
@@ -133,7 +133,7 @@ impl<H: HyperCraftHal> DeviceList<H> {
 
     pub fn handle_msr_read(&mut self, vcpu: &mut VCpu<H>) -> HyperResult {
         let msr = vcpu.regs().rcx as u32;
-
+        // info!("VM exit: RDMSR({:#x})", msr);
         if let Some(dev) = self.find_msr_device(msr) {
             match dev.lock().read(msr) {
                 Ok(value) => {
@@ -156,6 +156,7 @@ impl<H: HyperCraftHal> DeviceList<H> {
 
     pub fn handle_msr_write(&mut self, vcpu: &mut VCpu<H>) -> HyperResult {
         let msr = vcpu.regs().rcx as u32;
+        // info!("VM exit: WRMSR({:#x})", msr);
         let value = (vcpu.regs().rax & 0xffff_ffff) | (vcpu.regs().rdx << 32);
 
         if let Some(dev) = self.find_msr_device(msr) {
@@ -233,6 +234,7 @@ impl<H: HyperCraftHal> PerCpuDevices<H> for X64VcpuDevices<H> {
         devices.add_port_io_devices(&mut pmio_devices);
         devices.add_msr_device(Arc::new(Mutex::new(VirtLocalApic::msr_proxy(&apic_timer))));
         devices.add_msr_device(Arc::new(Mutex::new(ApicBaseMsrHandler {})));
+        devices.add_msr_device(Arc::new(Mutex::new(Ia32UmwaitControl::new(100000, 0))));
         // linux read this amd-related msr on my intel cpu for some unknown reason... make it happy
         devices.add_msr_device(Arc::new(Mutex::new(device_emu::MsrDummy::new(0xc0011029))));
 
@@ -292,6 +294,7 @@ impl<H: HyperCraftHal> PerCpuDevices<H> for X64VcpuDevices<H> {
     }
 
     fn check_events(&mut self, vcpu: &mut VCpu<H>) -> HyperResult {
+        // info!("check_events!!!");
         if self.apic_timer.lock().inner.check_interrupt() {
             vcpu.queue_event(self.apic_timer.lock().inner.vector(), None);
         }
@@ -301,17 +304,20 @@ impl<H: HyperCraftHal> PerCpuDevices<H> for X64VcpuDevices<H> {
         match self.last {
             Some(last) => {
                 let now = axhal::time::current_time_nanos();
+                // info!("check_events:{now} {last}!!!");
                 if now > 1_000_000 + last {
                     if !self.pic[0].lock().mask().get_bit(0) {
                         vcpu.queue_event(0x30, None);
-                        let _mask = self.pic[0].lock().mask();
+                        // let mask = self.pic[0].lock().mask();
                         // debug!("0x30 queued, mask {mask:#x}");
                     }
+                    // info!("check_events:{now} {last}!!!");
                     self.last = Some(now);
                 }
             }
             None => {
                 self.last = Some(axhal::time::current_time_nanos() + 10_000_000_000);
+                info!("check_events:{:?}!!!",self.last);
             }
         }
 
@@ -327,14 +333,30 @@ pub struct X64VmDevices<H: HyperCraftHal> {
 impl<H: HyperCraftHal> X64VmDevices<H> {
     fn handle_external_interrupt(vcpu: &VCpu<H>) -> HyperResult {
         let int_info = vcpu.interrupt_exit_info()?;
-        trace!("VM-exit: external interrupt: {:#x?}", int_info);
+        // if int_info.vector != 35 {
+        //     info!("VM-exit: external interrupt: {:#x?}", int_info);
+        // } else {
+        //     unsafe {
+        //         COUNT = COUNT + 1;
+        //         if COUNT % 50 == 0 {
+        //             info!("VM-exit: external interrupt: {:#x?}, {COUNT}", int_info);
+        //         }
+        //     }
+        // }
+        
 
-        if int_info.vector != 0xf0 {
-            panic!("VM-exit: external interrupt: {:#x?}", int_info);
-        }
+        // if int_info.vector != 0xf0 {
+        //     panic!("VM-exit: external interrupt: {:#x?}", int_info);
+        // }
 
         assert!(int_info.valid);
-
+        // if int_info.vector == 35 {
+        //     // info!("VM-exit: external interrupt: {:#x?}", int_info);
+        //     // crate::irq::dispatch_host_irq(0xf0 as usize)
+        //     Ok(())
+        // } else {
+        //     crate::irq::dispatch_host_irq(int_info.vector as usize)
+        // }
         crate::irq::dispatch_host_irq(int_info.vector as usize)
     }
 }

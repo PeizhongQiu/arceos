@@ -8,6 +8,7 @@ mod pcip;
 mod pit;
 mod port_passthrough;
 mod uart16550;
+mod msrs_to_save;
 
 extern crate alloc;
 
@@ -22,6 +23,7 @@ pub use pci::PCIConfigurationSpace;
 
 pub use port_passthrough::PortPassthrough;
 pub use uart16550::{Uart16550, MultiplexConsoleBackend};
+pub use msrs_to_save::Ia32UmwaitControl;
 
 pub trait PortIoDevice: Send + Sync {
     fn port_range(&self) -> core::ops::Range<u16>;
