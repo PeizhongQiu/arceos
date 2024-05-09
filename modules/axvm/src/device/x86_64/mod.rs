@@ -308,7 +308,7 @@ impl<H: HyperCraftHal> PerCpuDevices<H> for X64VcpuDevices<H> {
                 if now > 1_000_000 + last {
                     if !self.pic[0].lock().mask().get_bit(0) {
                         vcpu.queue_event(0x30, None);
-                        // let mask = self.pic[0].lock().mask();
+                        let mask = self.pic[0].lock().mask();
                         // debug!("0x30 queued, mask {mask:#x}");
                     }
                     // info!("check_events:{now} {last}!!!");

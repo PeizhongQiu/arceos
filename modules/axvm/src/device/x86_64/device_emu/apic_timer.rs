@@ -310,8 +310,10 @@ impl VirtMsrDevice for ApicBaseMsrHandler {
         
         let _ = msr;
         let mut apic_base = unsafe { x86::msr::rdmsr(x86::msr::IA32_APIC_BASE) };
-        // apic_base &=  !(1 << 11 | 1 << 10); // disable xAPIC and x2APIC
         apic_base |= 1 << 11 | 1 << 10; // enable xAPIC and x2APIC
+        if apic_base & (1 << 10) == (1 << 10) {
+            apic_base &= !(1 << 10);
+        }
         info!("read IA32_APIC_BASE: {apic_base:x}");
         Ok(apic_base)
     }
